@@ -9,8 +9,20 @@
     "test": "mocha build/test/test.js",
     "publish-private": "npm run build ; npm version patch ; npm publish --registry http://192.168.0.62:4873/"
   },
-  "author": "Ichipsea Internet",
-  "license": "ISC",
+  "maintainers": [
+    {
+      "name": "luliang",
+      "email": "lu_liang@qq.com"
+    }
+  ],
+  "keywords": [
+    "koa",
+    "typescript",
+    "identity",
+    "authorization",
+    "authentication"
+  ],
+  "license": "MIT",
   "dependencies": {
     "koa": "^2.0.0"
   },
