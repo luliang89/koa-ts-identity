@@ -1,0 +1,24 @@
+{
+  "name": "koa-ts-identity",
+  "version": "0.0.31",
+  "description": "koa authentication and authorization",
+  "main": "./build/src/index.js",
+  "types": "./build/src/index.d.ts",
+  "scripts": {
+    "build": "rm -rf build ; tsc",
+    "test": "mocha build/test/test.js",
+    "publish-private": "npm run build ; npm version patch ; npm publish --registry http://192.168.0.62:4873/"
+  },
+  "author": "Ichipsea Internet",
+  "license": "ISC",
+  "dependencies": {
+    "koa": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/koa": "^2.0.38",
+    "@types/mocha": "^2.2.33",
+    "@types/redis": "^0.12.34",
+    "mocha": "^3.2.0",
+    "typescript": "2.3.4"
+  }
+}
