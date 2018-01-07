@@ -17,7 +17,7 @@ export class RedisUserStore implements IUserStore {
         this.redis = getRedisAsyncClient(redisClient);
     }
 
-    async set(key: string, user: IUser, expires: number) {
+    async set(key: string, user: IUser, expires?: number) {
         if (user) {
             let u: any = user;
             let temp: any = {};

@@ -48,19 +48,31 @@ export class Authenticator {
             try {
                 _this.checkOrigin();
 
-                let token = context.cookies.get(_this.cookieName);
+                let token = _this.getTokenByCookie(context);
                 context.state.isAuthenticated = false;
 
                 if (token) {
-                    token = decodeURIComponent(token);
                     let key = _this.createUserStoreKey(token);
-                    let user = await _this.userStore.get(key);
+                    let user = await _this.getUser(key);
                     if (user) {
-                        let u: any = user;
-                        _this.userStore.set(key, null, _this.option.expires);
-                        context.state.user = u;
-                        context.state.isAuthenticated = true;
+                        let nowTimes = new Date().getTime();
+                        if (nowTimes > user.expires) {
+                            context.state.user = null;
+                            context.state.isAuthenticated = false;
+                        } else {
+                            user.expires += _this.option.expires * 1000;
+                            context.state.isAuthenticated = true;
+                        }
+                        _this.userStore.set(key, user);
+                        context.state.user = user;
                     }
+                } else {
+                    let token = await _this.calculateToken(context);
+                    let now = new Date();
+                    now.setFullYear(now.getFullYear() + 10);
+                    context.cookies.set(this.cookieName, token, {
+                        expires: now
+                    });
                 }
 
                 await next();
@@ -71,6 +83,41 @@ export class Authenticator {
         }
     }
 
+    getIP(ctx: Koa.Context) {
+        return ctx.request.header['x-real-ip'] || ctx.request.ip;
+    }
+
+    getTokenByCookie(ctx: Koa.Context) {
+        let token = ctx.cookies.get(this.cookieName);
+        if (token) {
+            token = decodeURIComponent(token);
+        }
+        return token;
+    }
+
+    async getUser(token: string) {
+        let key = this.createUserStoreKey(token);
+        let user = await this.userStore.get(key);
+        return user;
+    }
+
+    async setUser(token: string, user: IUser) {
+        let key = this.createUserStoreKey(token);
+        await this.userStore.set(this.createUserStoreKey(token), user);
+    }
+
+    async calculateToken(ctx: Koa.Context) {
+        let req = ctx.request;
+        let ip = this.getIP(ctx);
+        let userAgent = req.header['user-agent'];
+        let rand = Math.floor(Math.random() * 1000000);
+        let temp = `${ip}:${userAgent}:${rand}`;
+        let token = crypto.createHmac('sha1', this.option.secretKey)
+            .update(temp).digest().toString('base64');
+        return token;
+    }
+
+    /** 
     async signIn(ctx: Koa.Context, user: IUser) {
         let req = ctx.request;
         let u: any = user;
@@ -82,11 +129,31 @@ export class Authenticator {
         await this.userStore.set(this.createUserStoreKey(token), user, this.option.expires);
         ctx.cookies.set(this.cookieName, token);
     }
-
+    
     async signOut(ctx: Koa.Context) {
         let token = ctx.cookies.get(this.cookieName);
         await this.userStore.remove(this.createUserStoreKey(token));
         ctx.cookies.set(this.cookieName, '');
+    }
+    */
+
+    async signIn(ctx: Koa.Context, user: IUser) {
+        let ip = this.getIP(ctx);
+        user.ip = ip;
+        let now = new Date().getTime();
+        now += this.option.expires * 1000;
+        user.expires = now;
+        let token = this.getTokenByCookie(ctx);
+        await this.setUser(token, user);
+    }
+
+    async signOut(ctx: Koa.Context) {
+        let token = this.getTokenByCookie(ctx);
+        let user = await this.getUser(token);
+        if (user) {
+            user.expires = 0;
+            await this.setUser(token, user);
+        }
     }
 
 }
@@ -104,7 +171,7 @@ export interface IAuthenticationOption {
     secretKey: string
 
     /**
-     * 失效时间，单位秒，用于cookie
+     * 失效时间，单位秒，用户登录有效期
      */
     expires: number
 
@@ -120,7 +187,7 @@ export interface IAuthenticationOption {
  */
 export interface IUserStore {
 
-    set(key: string, user: IUser, expires: number): Promise<void>;
+    set(key: string, user: IUser): Promise<void>;
 
     get(key: string): Promise<IUser>;
 
@@ -128,5 +195,8 @@ export interface IUserStore {
 }
 
 export interface IUser {
+
+    [k: string]: any
+
     id: string
 }

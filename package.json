@@ -1,6 +1,6 @@
 {
   "name": "koa-ts-identity",
-  "version": "0.0.31",
+  "version": "0.1.1",
   "description": "koa authentication and authorization",
   "main": "./build/src/index.js",
   "types": "./build/src/index.d.ts",
